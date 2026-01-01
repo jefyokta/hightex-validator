@@ -1,0 +1,25 @@
+{
+    "name": "jefyokta/hightex-validator",
+    "description": "hightex document validator",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Jefyokta\\HightexValidator\\": "src/",
+            "Tests\\":"tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Jepi Oktamipa",
+            "email": "jefyokta50@gmail.com"
+        }
+    ],
+    "require-dev": {
+        "pestphp/pest": "^4.3"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
