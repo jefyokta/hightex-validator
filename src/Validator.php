@@ -113,7 +113,7 @@ class Validator
             } else  if (!empty($n['content']) && is_array($n['content'])) {
                 $result .= $this->mergeText($n['content']);
             } else {
-                $result .= self::INLINE_PLACEHOLDER;
+                $result .= "{".($n['type'] ?? self::INLINE_PLACEHOLDER)."}";
             }
         }
 

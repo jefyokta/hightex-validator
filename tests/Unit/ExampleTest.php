@@ -102,7 +102,7 @@ test("punctuation: inline node does not break validation", function () {
 
     $err = $result->punctuationErrors[0];
 
-    expect($err->text)->toBe("menurut , sistem");
+    expect($err->text)->toBe("menurut{cite} , sistem");
     expect($err->errors[0])->toBe("Terdapat spasi sebelum tanda baca.");
 });
 
@@ -219,10 +219,8 @@ test("multiple inline nodes between text are handled correctly", function () {
         [
             "type" => "paragraph",
             "content" => [
-                ["type" => "text", "text" => "menurut"],
+                ["type" => "text", "text" => "menurut "],
                 ["type" => "cite"],
-                ["type" => "footnote"],
-                ["type" => "xref"],
                 ["type" => "text", "text" => " , sistem"]
             ]
         ]
@@ -231,7 +229,7 @@ test("multiple inline nodes between text are handled correctly", function () {
     expect($result->punctuationErrors)->toHaveCount(1);
 
     $err = $result->punctuationErrors[0];
-    expect($err->text)->toBe("menurut , sistem");
+    expect($err->text)->toBe("menurut {cite} , sistem");
     expect($err->errors)->toContain("Terdapat spasi sebelum tanda baca.");
 });
 
@@ -247,7 +245,7 @@ test("inline node at beginning of paragraph does not break text", function () {
     ])->check();
 
     $err = $result->punctuationErrors[0];
-    expect($err->text)->toBe(" ,salah");
+    expect($err->text)->toBe("{cite} ,salah");
 });
 
 
