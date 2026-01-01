@@ -2,18 +2,10 @@
 
 namespace Jefyokta\HightexValidator\Plugin;
 
+use Jefyokta\HightexValidator\ValidatedResult;
 
-class NodePlugin
+interface NodePlugin
 {
+    public function validate(array $node, ValidatedResult &$result);
 
-    /**
-     * $validator must return true if the text contain errors
-     * @param callable(array $text, ValidatedResult $result) $validator
-     */
-    public function __construct(private $validator,private $name) {}
-
-    function getValidator(){
-
-        return $this->validator;
-    }
 }

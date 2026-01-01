@@ -1,9 +1,9 @@
 <?php
 
-use Jefyokta\HightexValidator\Plugin\PunctuationPlugin;
+use Jefyokta\HightexValidator\Exception\PluginException;
 use Jefyokta\HightexValidator\Validator;
-
-
+use Tests\Helper\NodePluginExample;
+use Tests\Helper\PunctuationPluginExample;
 
 test('sanity check', function () {
     expect(true)->toBeTrue();
@@ -367,20 +367,37 @@ test("add plugin ", function () {
             ]
         ],
         plugins: [
-            new PunctuationPlugin(
-                validator: function ($text) {
-                    $words = explode(" ", trim($text));
-                    return count($words) >= 200;
-                },
-                message: "Jumlah kata melebihi 200"
-            )
+            PunctuationPluginExample::class
         ]
     ))->check();
 
 
     expect($v->getPlugins())->toHaveCount(1);
-  
 });
+test("add plugin : node ", function () {
+
+    $v = Validator::make(
+        nodes: [
+            [
+                "type" => "paragraph",
+                "content" => [
+                    [
+                        "type" => "text",
+                        "text" => str_repeat("Test ", 202)
+                    ]
+                ]
+            ]
+        ],
+        plugins: [
+            NodePluginExample::class
+        ]
+    );
+
+
+    expect($v->getPlugins())->toHaveCount(1);
+});
+
+
 test("punctuation plugin test ", function () {
 
     $result = (Validator::make(
@@ -396,15 +413,31 @@ test("punctuation plugin test ", function () {
             ]
         ],
         plugins: [
-            new PunctuationPlugin(
-                validator: function ($text) {
-                    return true;
-                },
-                message: "test"
-            )
+            PunctuationPluginExample::class
         ]
     ))->check();
 
 
     expect($result->punctuationErrors)->toHaveCount(1);
+});
+
+test("node plugin test", function () {
+    $err = Validator::make(
+        plugins: [
+            NodePluginExample::class,
+
+        ],
+        nodes: [["type" => "test"]]
+    )->check()
+        ->nodeErrors;
+    expect($err)->toHaveCount(1);
+});
+
+test("cannot registering non-plugin class", function () {
+    expect(
+        fn() =>
+        Validator::make(plugins: [
+            Validator::class
+        ])
+    )->toThrow(PluginException::class);
 });

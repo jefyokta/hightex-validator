@@ -4,6 +4,7 @@ namespace Jefyokta\HightexValidator;
 
 use Jefyokta\HightexValidator\Plugin\NodePlugin;
 use Jefyokta\HightexValidator\Errors\PunctuationError;
+use Jefyokta\HightexValidator\Exception\PluginException;
 use Jefyokta\HightexValidator\Plugin\PunctuationPlugin;
 
 class Validator
@@ -11,12 +12,12 @@ class Validator
 
 
     /**
-     * @var PunctuationPlugin[]
+     * @var class-string<PunctuationPlugin>[]
      */
     private $punctuationPlugins = [];
 
     /**
-     * @var NodePlugin[]
+     * @var class-string<NodePlugin>[]
      */
     private $nodePlugin = [];
 
@@ -31,17 +32,16 @@ class Validator
 
         if (!empty($plugins)) {
             foreach ($plugins as $plug) {
-                if ($plug instanceof PunctuationPlugin) {
+                if ((new $plug) instanceof PunctuationPlugin) {
                     $this->punctuationPlugins[] = $plug;
                     continue;
                 }
 
-                if ($plug instanceof NodePlugin) {
+                if ((new $plug)  instanceof NodePlugin) {
                     $this->nodePlugin[] = $plug;
                     continue;
                 }
-                //to do:
-                //i'll make error class and throw it here later
+                throw new PluginException("Cannot add plugin with class {$plug}");
             }
         }
     }
@@ -85,7 +85,7 @@ class Validator
             if (!empty($this->nodePlugin)) {
 
                 foreach ($this->nodePlugin as $plug) {
-                    $plug->getValidator()($node, $result);
+                    $this->makeNodePlugin($plug)->validate($node, $result);
                 }
             }
 
@@ -122,7 +122,7 @@ class Validator
     function getPlugins()
     {
 
-        return [...$this->nodePlugin, $this->punctuationPlugins];
+        return [...$this->nodePlugin, ...$this->punctuationPlugins];
     }
 
 
@@ -154,11 +154,12 @@ class Validator
 
         if (!empty($this->punctuationPlugins)) {
             foreach ($this->punctuationPlugins as $plug) {
-                $err = $plug->getValidator()($text);
+                $err = ($plug = $this->makePuncPlugin($plug))
+                    ->validate($text);;
                 if ($err) {
                     $puncError ??= new PunctuationError($text, $this->context);
                     $puncError->addErrorDesc(
-                        $plug->getErrorMessage() ?? "Kesalahan tanda baca."
+                        $plug->getMessage()
                     );
                 }
             }
@@ -167,5 +168,17 @@ class Validator
         if ($puncError) {
             $result->addPunctuacionError($puncError);
         }
+    }
+
+    private function makeNodePlugin($class): NodePlugin
+    {
+
+        return new $class;
+    }
+
+    private function makePuncPlugin($class): PunctuationPlugin
+    {
+
+        return new $class;
     }
 }

@@ -14,10 +14,11 @@ class ValidatedResult
      */
     public $punctuationErrors = [];
 
+    public $nodeErrors = [];
+
     function isOk(): bool
     {
-
-        return empty($this->punctuationErrors) && $this->unreferedImage == 0 && $this->unreferedTable == 0;;
+        return  empty($this->nodeErrors) && empty($this->punctuationErrors) && $this->unreferedImage == 0 && $this->unreferedTable == 0;;
     }
 
 
@@ -25,4 +26,6 @@ class ValidatedResult
     {
         $this->punctuationErrors[] = $punctuation;
     }
+
+
 };

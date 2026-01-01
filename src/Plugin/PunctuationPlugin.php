@@ -3,24 +3,14 @@
 namespace Jefyokta\HightexValidator\Plugin;
 
 
-class PunctuationPlugin
+interface PunctuationPlugin
 {
 
     /**
      * $validator must return true if the text contain errors
      * @param callable(string $text):bool $validator
      */
-    public function __construct(private $validator, private $message = '') {}
+    public function validate(string $text): bool;
 
-    function getValidator()
-    {
-
-        return $this->validator;
-    }
-
-    function  getErrorMessage() {
-
-        return $this->message;
-        
-    }
+    public function getMessage():string;
 }
