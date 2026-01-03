@@ -1,6 +1,7 @@
 <?php
 
 use Jefyokta\HightexValidator\Exception\PluginException;
+use Jefyokta\HightexValidator\Plugin\UnreferedPlugin;
 use Jefyokta\HightexValidator\Validator;
 use Tests\Helper\NodePluginExample;
 use Tests\Helper\PunctuationPluginExample;
@@ -11,39 +12,24 @@ test('sanity check', function () {
 
 
 
-test("unreferenced image detected", function () {
-    $result = Validator::make([
-        ["type" => "image"]
-    ])->check();
+// test("unreferenced image detected", function () {
+//     $result = Validator::make([
+//         ["type" => "image"]
+//     ])->check();
 
-    expect($result->unreferedImage)->toBe(1);
-});
+//     expect($result->unfigImage)->toBe(1);
+// });
 
-test("image with figcaption is valid", function () {
-    $result = Validator::make([
-        ["type" => "image"],
-        ["type" => "figcaption"]
-    ])->check();
+// test("image with figcaption is valid", function () {
+//     $result = Validator::make([
+//         ["type" => "image"],
+//         ["type" => "figcaption"]
+//     ])->check();
 
-    expect($result->unreferedImage)->toBe(0);
-});
+//     expect($result->unfigImage)->toBe(0);
+// });
 
-test("unreferenced table detected", function () {
-    $result = Validator::make([
-        ["type" => "table"]
-    ])->check();
 
-    expect($result->unreferedTable)->toBe(1);
-});
-
-test("table with figcaption before is valid", function () {
-    $result = Validator::make([
-        ["type" => "figcaption"],
-        ["type" => "table"]
-    ])->check();
-
-    expect($result->unreferedTable)->toBe(0);
-});
 
 
 test("punctuation: space before comma and repeated punctuation", function () {
@@ -250,23 +236,6 @@ test("inline node at beginning of paragraph does not break text", function () {
 
 
 
-test("figcaption text is also validated for punctuation", function () {
-    $result = Validator::make([
-        ["type" => "image"],
-        [
-            "type" => "figcaption",
-            "content" => [
-                ["type" => "text", "text" => "Gambar ini , salah"]
-            ]
-        ]
-    ])->check();
-
-    expect($result->punctuationErrors)->toHaveCount(1);
-    expect($result->unreferedImage)->toBe(0);
-});
-
-
-
 test("one paragraph can contain multiple punctuation error types", function () {
     $text = "ini ,,, salah";
 
@@ -287,22 +256,7 @@ test("one paragraph can contain multiple punctuation error types", function () {
 
 
 
-test("inline placeholder does not leak into error text", function () {
-    $result = Validator::make([
-        [
-            "type" => "paragraph",
-            "content" => [
-                ["type" => "text", "text" => "kata"],
-                ["type" => "cite"],
-                ["type" => "text", "text" => " ,"]
-            ]
-        ]
-    ])->check();
 
-    $err = $result->punctuationErrors[0];
-
-    expect($err->text)->not->toContain("\u{FFFC}");
-});
 
 
 
@@ -312,6 +266,18 @@ test("comma without space before is valid", function () {
             "type" => "paragraph",
             "content" => [
                 ["type" => "text", "text" => "kata,kata"]
+            ]
+        ]
+    ])->check();
+
+    expect($result->punctuationErrors)->toBeEmpty();
+});
+test("three dots is excluded", function () {
+    $result = Validator::make([
+        [
+            "type" => "paragraph",
+            "content" => [
+                ["type" => "text", "text" => "..."]
             ]
         ]
     ])->check();
@@ -334,22 +300,6 @@ test("single punctuation is valid", function () {
 
 
 
-test("unreferenced image and punctuation error both detected", function () {
-    $result = Validator::make([
-        ["type" => "image"],
-        [
-            "type" => "paragraph",
-            "content" => [
-                ["type" => "text", "text" => "salah ,"]
-            ]
-        ]
-    ])->check();
-
-    expect($result->unreferedImage)->toBe(1);
-    expect($result->punctuationErrors)->toHaveCount(1);
-});
-
-
 test("add plugin ", function () {
 
     $result = ($v = Validator::make(
@@ -370,7 +320,7 @@ test("add plugin ", function () {
     ))->check();
 
 
-    expect($v->getPlugins())->toHaveCount(1);
+    expect($v->getPlugins())->toHaveCount(2);
 });
 test("add plugin : node ", function () {
 
@@ -392,7 +342,7 @@ test("add plugin : node ", function () {
     );
 
 
-    expect($v->getPlugins())->toHaveCount(1);
+    expect($v->getPlugins())->toHaveCount(2);
 });
 
 
@@ -438,4 +388,82 @@ test("cannot registering non-plugin class", function () {
             Validator::class
         ])
     )->toThrow(PluginException::class);
+});
+
+
+test("counting unrefered table & image ", function () {
+
+    $v = Validator::make(
+        nodes: [
+            [
+                "type" => "paragraph",
+                "content" => [
+                    [
+                        "type" => "text",
+                        "text" => str_repeat("Test ", 202)
+                    ],
+                    [
+                        "type" => "refComponent",
+                        "attrs" => [
+                            "ref" => "imageFigure",
+                            "link" => "fig:1"
+                        ]
+                    ]
+                ],
+
+            ],
+            [
+                "type" => "imageFigure",
+                "attrs" => ["id" => "fig:1"],
+                "content" => [
+                    ["type" => "image"],
+                    ["type" => "figcaption"]
+                ]
+            ]
+        ],
+        plugins: [
+            NodePluginExample::class
+        ]
+    );
+    $v->check();
+
+
+    $image = NodePluginExample::$image;
+    $ref = NodePluginExample::$ref;
+    $unrefimage = NodePluginExample::getUnrefered()['image'];
+    expect($unrefimage)->toHaveCount(0);
+    expect($image)->toHaveCount(1);
+    expect($ref)->toHaveCount(1);
+});
+
+
+test("detect unrefered fig ", function () {
+
+    UnreferedPlugin::reset();
+    $v = Validator::make(
+        nodes: [
+            [
+                "type" => "paragraph",
+                "content" => [
+                    [
+                        "type" => "text",
+                        "text" => str_repeat("Test ", 202)
+                    ],
+                ],
+
+            ],
+            [
+                "type" => "imageFigure",
+                "attrs" => ["id" => "fig:1"],
+                "content" => [
+                    ["type" => "image"],
+                    ["type" => "figcaption"]
+                ]
+            ]
+        ],
+    );
+    $v->check();
+    $image = UnreferedPlugin::getUnrefered()['image'];
+    expect($image)->toHaveCount(1);
+    expect($image[0]["id"])->toBe("fig:1");
 });

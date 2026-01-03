@@ -5,6 +5,10 @@ namespace Jefyokta\HightexValidator\Errors;
 class PunctuationError
 {
 
+    /**
+     * @var string
+     */
+
     //errors desc ex: "Tidak di akhiri titik"
     public $errors = [];
 

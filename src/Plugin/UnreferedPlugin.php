@@ -1,24 +1,36 @@
 <?php
 
-namespace Tests\Helper;
+namespace Jefyokta\HightexValidator\Plugin;
 
-use Jefyokta\HightexValidator\Plugin\NodePlugin;
 use Jefyokta\HightexValidator\ValidatedResult;
+use Jefyokta\HightexValidator\Validator;
 
-class NodePluginExample implements NodePlugin
+class UnreferedPlugin implements NodePlugin
 {
 
     static $ref = [];
     static $image = [];
     static $table = [];
+    static $exceptContext = [];
 
-    public function validate(array $node, ValidatedResult $result,string $context)
+    public function validate(array $node, ValidatedResult $result, string $context)
     {
+
+        if (in_array($context, self::$exceptContext)) {
+            return;
+        }
         if ($node['type'] == "imageFigure") {
-            self::$image[] = $node["attrs"]['id'];
+            $im["id"] = $node["attrs"]['id'];
+            $im["caption"] = Validator::mergeText($node['content'][1]["content"] ?? []);
+            $im["context"] = $context;
+            self::$image[] = $im;
         }
         if ($node['type'] == "figureTable") {
-            self::$table[] = $node["attrs"]['id'];
+            $tab["id"] = $node["attrs"]['id'];
+            $tab["caption"] = Validator::mergeText($node['content'][0]["content"] ?? []);
+            $tab["context"] = $context;
+
+            self::$table[] = $tab;
         }
         if ($node["type"] == "refComponent") {
             self::$ref[] = [
@@ -26,11 +38,6 @@ class NodePluginExample implements NodePlugin
                 "link" => $node["attrs"]['link']
             ];
         }
-
-
-
-
-        $result->nodeErrors[] = "test";
     }
 
     static function reset()
@@ -46,13 +53,12 @@ class NodePluginExample implements NodePlugin
 
         foreach (self::$image as $key => $value) {
             foreach (self::$ref as $val) {
-                if ($val['link'] == $value) {
-
+                if ($val['link'] == $value["id"]) {
                     unset(self::$image[$key]);
                 }
             }
         }
-        foreach (self::$table as $key => $value) {
+        foreach (self::$table as $key => $value["id"]) {
             foreach (self::$ref as $val) {
                 if ($val['link'] == $value) {
                     unset(self::$table[$key]);
@@ -64,5 +70,13 @@ class NodePluginExample implements NodePlugin
             "image" => self::$image,
             "table" => self::$table
         ];
+    }
+
+    static function ignoreIfContext(...$contexts)
+    {
+
+        foreach ($contexts as $context) {
+            self::$exceptContext[] = $context;
+        }
     }
 }

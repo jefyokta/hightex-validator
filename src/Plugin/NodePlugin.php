@@ -6,6 +6,6 @@ use Jefyokta\HightexValidator\ValidatedResult;
 
 interface NodePlugin
 {
-    public function validate(array $node, ValidatedResult &$result);
+    public function validate(array $node, ValidatedResult $result,string $context);
 
 }

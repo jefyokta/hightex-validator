@@ -6,6 +6,7 @@ use Jefyokta\HightexValidator\Plugin\NodePlugin;
 use Jefyokta\HightexValidator\Errors\PunctuationError;
 use Jefyokta\HightexValidator\Exception\PluginException;
 use Jefyokta\HightexValidator\Plugin\PunctuationPlugin;
+use Jefyokta\HightexValidator\Plugin\UnreferedPlugin;
 
 class Validator
 {
@@ -19,10 +20,13 @@ class Validator
     /**
      * @var class-string<NodePlugin>[]
      */
-    private $nodePlugin = [];
+    private $nodePlugin = [
+        UnreferedPlugin::class
+    ];
 
     private $context;
     const INLINE_PLACEHOLDER = "\u{FFFC}";
+
 
 
     public function __construct(private $nodes = [], $context = '', $plugins = [])
@@ -32,15 +36,21 @@ class Validator
 
         if (!empty($plugins)) {
             foreach ($plugins as $plug) {
-                if ((new $plug) instanceof PunctuationPlugin) {
+
+                if (!is_string($plug) || !class_exists($plug)) {
+                    throw new PluginException("Plugin must be a valid class name");
+                }
+
+                if (is_subclass_of($plug, PunctuationPlugin::class)) {
                     $this->punctuationPlugins[] = $plug;
                     continue;
                 }
 
-                if ((new $plug)  instanceof NodePlugin) {
+                if (is_subclass_of($plug, NodePlugin::class)) {
                     $this->nodePlugin[] = $plug;
                     continue;
                 }
+
                 throw new PluginException("Cannot add plugin with class {$plug}");
             }
         }
@@ -49,7 +59,7 @@ class Validator
     static function make($nodes = [],  $context = '', $plugins = [],)
     {
 
-        return (new static($nodes,  $context, $plugins));
+        return (new Validator($nodes,  $context, $plugins));
     }
     public function check(?array $nodes = null, ?ValidatedResult $result = null): ValidatedResult
     {
@@ -58,36 +68,27 @@ class Validator
         $nodes = $nodes ?? $this->nodes;
 
         foreach ($nodes as $index => $node) {
-
-            if ($node['type'] === 'image') {
-                if (
-                    !isset($nodes[$index + 1]) ||
-                    $nodes[$index + 1]['type'] !== 'figcaption'
-                ) {
-                    $result->unreferedImage++;
+            if (!empty($this->nodePlugin)) {
+                foreach ($this->nodePlugin as $plug) {
+                    $this->makeNodePlugin($plug)->validate($node, $result, $this->context);
                 }
             }
+            // if ($node['type'] === 'image') {
+            //     if (
+            //         !isset($nodes[$index + 1]) ||
+            //         $nodes[$index + 1]['type'] !== 'figcaption'
+            //     ) {
+            //         $result->unfigImage++;
+            //     }
+            // }
 
-            if ($node['type'] === 'table') {
-                if (
-                    !isset($nodes[$index - 1]) ||
-                    $nodes[$index - 1]['type'] !== 'figcaption'
-                ) {
-                    $result->unreferedTable++;
-                }
-            }
+
             if (in_array($node['type'], $this->isContainText(), true)) {
-                $text = $this->mergeText($node['content'] ?? []);
+                $text = self::mergeText($node['content'] ?? []);
                 $this->validatePunctuation($text, $result);
             }
 
 
-            if (!empty($this->nodePlugin)) {
-
-                foreach ($this->nodePlugin as $plug) {
-                    $this->makeNodePlugin($plug)->validate($node, $result);
-                }
-            }
 
             if (!empty($node['content']) && is_array($node['content'])) {
                 $this->check($node['content'], $result);
@@ -102,7 +103,7 @@ class Validator
 
         return ["paragraph", "figcaption"];
     }
-    function mergeText(array $nodes): string
+    static function mergeText(array $nodes): string
     {
         $result = '';
 
@@ -111,9 +112,11 @@ class Validator
             if (($n['type'] ?? null) === 'text') {
                 $result .= $n['text'];
             } else  if (!empty($n['content']) && is_array($n['content'])) {
-                $result .= $this->mergeText($n['content']);
+                $result .= self::mergeText($n['content']);
+            } elseif (($n['type'] ?? null) == 'hardBreak') {
+                $result .= "\n";
             } else {
-                $result .= "{".($n['type'] ?? self::INLINE_PLACEHOLDER)."}";
+                $result .= "{" . ($n['type'] ?? self::INLINE_PLACEHOLDER) . "}";
             }
         }
 
@@ -132,7 +135,7 @@ class Validator
             return;
         }
 
-        $text = str_replace(self::INLINE_PLACEHOLDER, '', $text);
+        // $text = str_replace(self::INLINE_PLACEHOLDER, '', $text);
 
         $puncError = null;
 
@@ -146,11 +149,17 @@ class Validator
         //     $puncError ??= new PunctuationError($text, $this->context);
         //     $puncError->addErrorDesc("Terdapat spasi ganda atau lebih.");
         // }
+        if (preg_match('/([!?.,])\1+/u', $text)) {
 
-        if (preg_match('/([,.!?])\1+/u', $text)) {
-            $puncError ??= new PunctuationError($text, $this->context);
-            $puncError->addErrorDesc("Tanda baca ditulis berulang.");
+            if (
+                preg_match('/\.{4,}/', $text) ||
+                preg_match('/([!?.,])\1+/', str_replace(['...', '…'], '', $text))
+            ) {
+                $puncError ??= new PunctuationError($text, $this->context);
+                $puncError->addErrorDesc("Tanda baca ditulis berulang.");
+            }
         }
+
 
         if (!empty($this->punctuationPlugins)) {
             foreach ($this->punctuationPlugins as $plug) {

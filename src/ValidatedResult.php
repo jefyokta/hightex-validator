@@ -9,6 +9,7 @@ class ValidatedResult
 
     public $unreferedImage = 0;
     public $unreferedTable = 0;
+    public $unfigImage = 0;
     /**
      * @var PunctuationError[]
      */
@@ -26,6 +27,4 @@ class ValidatedResult
     {
         $this->punctuationErrors[] = $punctuation;
     }
-
-
 };
