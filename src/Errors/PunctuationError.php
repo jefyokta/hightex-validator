@@ -6,10 +6,8 @@ class PunctuationError
 {
 
     /**
-     * @var string
+     * @var PunctuationErrorResult[]
      */
-
-    //errors desc ex: "Tidak di akhiri titik"
     public $errors = [];
 
     /**
@@ -25,7 +23,7 @@ class PunctuationError
     /**
      * define what error type in current text
      */
-    function addErrorDesc($err)
+    function addErrorDesc(PunctuationErrorResult $err)
     {
         $this->errors[] = $err;
         return $this;

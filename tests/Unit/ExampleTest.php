@@ -49,8 +49,8 @@ test("punctuation: space before comma and repeated punctuation", function () {
     $err = $result->punctuationErrors[0];
 
     expect($err->text)->toBe($text);
-    expect($err->errors[0])->toBe("Terdapat spasi sebelum tanda baca.");
-    expect($err->errors[1])->toBe("Tanda baca ditulis berulang.");
+    expect($err->errors[0]->__toString())->toBe("Terdapat spasi sebelum tanda baca.");
+    expect($err->errors[1]->__toString())->toBe("Tanda baca ditulis berulang.");
 });
 
 test("punctuation: merged text nodes validated as one sentence", function () {
@@ -69,7 +69,7 @@ test("punctuation: merged text nodes validated as one sentence", function () {
     $err = $result->punctuationErrors[0];
 
     expect($err->text)->toBe("jepi ,");
-    expect($err->errors[0])->toBe("Terdapat spasi sebelum tanda baca.");
+    expect($err->errors[0]->__toString())->toBe("Terdapat spasi sebelum tanda baca.");
 });
 
 test("punctuation: inline node does not break validation", function () {
@@ -89,7 +89,7 @@ test("punctuation: inline node does not break validation", function () {
     $err = $result->punctuationErrors[0];
 
     expect($err->text)->toBe("menurut{cite} , sistem");
-    expect($err->errors[0])->toBe("Terdapat spasi sebelum tanda baca.");
+    expect($err->errors[0]->__toString())->toBe("Terdapat spasi sebelum tanda baca.");
 });
 
 
@@ -216,7 +216,7 @@ test("multiple inline nodes between text are handled correctly", function () {
 
     $err = $result->punctuationErrors[0];
     expect($err->text)->toBe("menurut {cite} , sistem");
-    expect($err->errors)->toContain("Terdapat spasi sebelum tanda baca.");
+    expect(array_map(fn($item) => (string)$item, $err->errors))->toContain("Terdapat spasi sebelum tanda baca.");
 });
 
 test("inline node at beginning of paragraph does not break text", function () {
@@ -249,9 +249,9 @@ test("one paragraph can contain multiple punctuation error types", function () {
     ])->check();
 
     $err = $result->punctuationErrors[0];
-
-    expect($err->errors)->toContain("Terdapat spasi sebelum tanda baca.");
-    expect($err->errors)->toContain("Tanda baca ditulis berulang.");
+    $errs = array_map(fn($item) => (string)$item, $err->errors);
+    expect($errs)->toContain("Terdapat spasi sebelum tanda baca.");
+    expect($errs)->toContain("Tanda baca ditulis berulang.");
 });
 
 
@@ -320,7 +320,7 @@ test("add plugin ", function () {
     ))->check();
 
 
-    expect($v->getPlugins())->toHaveCount(2);
+    expect($v->getPlugins())->toHaveCount(4);
 });
 test("add plugin : node ", function () {
 
@@ -342,7 +342,7 @@ test("add plugin : node ", function () {
     );
 
 
-    expect($v->getPlugins())->toHaveCount(2);
+    expect($v->getPlugins())->toHaveCount(4);
 });
 
 

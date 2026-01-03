@@ -15,4 +15,9 @@ class PunctuationPluginExample implements PunctuationPlugin
     {
         return "Test";
     }
+
+    public function getMatches(): ?string
+    {
+        return null;
+    }
 }

@@ -4,8 +4,11 @@ namespace Jefyokta\HightexValidator;
 
 use Jefyokta\HightexValidator\Plugin\NodePlugin;
 use Jefyokta\HightexValidator\Errors\PunctuationError;
+use Jefyokta\HightexValidator\Errors\PunctuationErrorResult;
 use Jefyokta\HightexValidator\Exception\PluginException;
+use Jefyokta\HightexValidator\Plugin\MultiplePunctuation;
 use Jefyokta\HightexValidator\Plugin\PunctuationPlugin;
+use Jefyokta\HightexValidator\Plugin\SpaceBefore;
 use Jefyokta\HightexValidator\Plugin\UnreferedPlugin;
 
 class Validator
@@ -15,13 +18,17 @@ class Validator
     /**
      * @var class-string<PunctuationPlugin>[]
      */
-    private $punctuationPlugins = [];
+    private $punctuationPlugins = [
+        SpaceBefore::class,
+        MultiplePunctuation::class,
+    ];
 
     /**
      * @var class-string<NodePlugin>[]
      */
     private $nodePlugin = [
-        UnreferedPlugin::class
+        UnreferedPlugin::class,
+
     ];
 
     private $context;
@@ -73,14 +80,6 @@ class Validator
                     $this->makeNodePlugin($plug)->validate($node, $result, $this->context);
                 }
             }
-            // if ($node['type'] === 'image') {
-            //     if (
-            //         !isset($nodes[$index + 1]) ||
-            //         $nodes[$index + 1]['type'] !== 'figcaption'
-            //     ) {
-            //         $result->unfigImage++;
-            //     }
-            // }
 
 
             if (in_array($node['type'], $this->isContainText(), true)) {
@@ -139,27 +138,6 @@ class Validator
 
         $puncError = null;
 
-        if (preg_match('/\s+[,.!?;]/u', $text)) {
-            $puncError ??= new PunctuationError($text, $this->context);
-            $puncError->addErrorDesc("Terdapat spasi sebelum tanda baca.");
-        }
-
-
-        // if (preg_match('/\s{2,}/u', $text)) {
-        //     $puncError ??= new PunctuationError($text, $this->context);
-        //     $puncError->addErrorDesc("Terdapat spasi ganda atau lebih.");
-        // }
-        if (preg_match('/([!?.,])\1+/u', $text)) {
-
-            if (
-                preg_match('/\.{4,}/', $text) ||
-                preg_match('/([!?.,])\1+/', str_replace(['...', '…'], '', $text))
-            ) {
-                $puncError ??= new PunctuationError($text, $this->context);
-                $puncError->addErrorDesc("Tanda baca ditulis berulang.");
-            }
-        }
-
 
         if (!empty($this->punctuationPlugins)) {
             foreach ($this->punctuationPlugins as $plug) {
@@ -167,9 +145,7 @@ class Validator
                     ->validate($text);;
                 if ($err) {
                     $puncError ??= new PunctuationError($text, $this->context);
-                    $puncError->addErrorDesc(
-                        $plug->getMessage()
-                    );
+                    $puncError->addErrorDesc(new PunctuationErrorResult($plug->getMessage(), $plug->getMatches()));
                 }
             }
         }
