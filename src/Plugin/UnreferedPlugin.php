@@ -41,11 +41,7 @@ class UnreferedPlugin implements NodePlugin
             ];
         }
 
-        if (isset($node["content"]) && !empty($node['content'])) {
-            foreach ($node['content'] as $n) {
-                $this->validate($n, $result, $context);
-            }
-        }
+
     }
 
     static function reset(): void
